@@ -3,18 +3,19 @@
 #include "../../include/ctc.h"
 
 
-REGISTER_OP("CTC")
+REGISTER_OP("WarpCTC")
     .Input("inputs: float32")
     .Input("input_lens: int32")
     .Input("labels: int32")
     .Input("label_lens: int32")
-    .Output("loss: float32");
+    .Output("loss: float32")
+    .Output("gradient: float32");
 
 using namespace tensorflow;
 
-class CTCOp : public OpKernel {
+class WarpCTCOp : public OpKernel {
  public:
-  explicit CTCOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit WarpCTCOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
     // Grab the input tensor
@@ -27,6 +28,12 @@ class CTCOp : public OpKernel {
                                                      &output_tensor));
     auto output = output_tensor->flat<float>();
 
+    // Create an gradients tensor
+    Tensor* gradients = NULL;
+    OP_REQUIRES_OK(context, context->allocate_output(1, input_tensor.shape(),
+                                                     &gradients));
+    auto grads = gradients->flat<float>();
+
     // Set all but the first element of the output tensor to 0.
     const int N = input.size();
     for (int i = 1; i < N; i++) {
@@ -38,4 +45,4 @@ class CTCOp : public OpKernel {
   }
 };
 
-REGISTER_KERNEL_BUILDER(Name("CTC").Device(DEVICE_CPU), CTCOp);
+REGISTER_KERNEL_BUILDER(Name("WarpCTC").Device(DEVICE_CPU), WarpCTCOp);

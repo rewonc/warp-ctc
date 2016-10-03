@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from warpctc import warp
+from warpctc import ctc
 
 
 def get_dense_array(labels):
@@ -26,12 +26,11 @@ class CTCLossTest(tf.test.TestCase):
         inputs_t = tf.constant(inputs)
 
         with self.test_session(use_gpu=False) as sess:
-            loss = warp.ctc(inputs=inputs_t,
-                            input_lens=input_lens,
-                            labels=labels,
-                            label_lens=label_lens)
-            import pdb; pdb.set_trace()
+            loss = ctc(inputs=inputs_t, input_lens=input_lens,
+                       labels=labels, label_lens=label_lens)
             grad = tf.gradients(loss, [inputs_t])[0]
+
+            import pdb; pdb.set_trace()
 
             self.assertShapeEqual(loss_truth, loss)
             self.assertShapeEqual(grad_truth, grad)
