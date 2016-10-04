@@ -4,12 +4,14 @@
 
 
 REGISTER_OP("WarpCTC")
-    .Input("inputs: float32")
-    .Input("input_lens: int32")
-    .Input("labels: int32")
-    .Input("label_lens: int32")
+    .Input("data: float32")
+    .Input("data_lengths: int32")
+    .Input("flat_labels: int32")
+    .Input("label_lengths: int32")
+    .Input("alphabet_size: int32")
     .Output("loss: float32")
     .Output("gradient: float32");
+
 
 using namespace tensorflow;
 
@@ -38,6 +40,7 @@ class WarpCTCOp : public OpKernel {
     const int N = input.size();
     for (int i = 1; i < N; i++) {
       output(i) = 0;
+      grads(i) = 0;
     }
 
     // Preserve the first input value if possible.
@@ -46,3 +49,4 @@ class WarpCTCOp : public OpKernel {
 };
 
 REGISTER_KERNEL_BUILDER(Name("WarpCTC").Device(DEVICE_CPU), WarpCTCOp);
+REGISTER_KERNEL_BUILDER(Name("WarpCTC").Device(DEVICE_GPU), WarpCTCOp);
