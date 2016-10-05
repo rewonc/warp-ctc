@@ -3,22 +3,6 @@ import numpy as np
 from warpctc import ctc
 
 
-def get_dense_array(labels):
-    '''Return a flattened set of labels and lengths
-    for use in CTC calculations
-
-    Inputs:
-        labels (list of lists): 0-indexed character labels
-
-    Outputs:
-        0 (np.array): flattened labels
-        1 (np.array): label lengths
-    '''
-    flat = sum(labels)
-    lens = [len(li) for li in labels]
-    return np.array(flat, dtype=np.int32), np.array(lens, dtype=np.int32)
-
-
 class CTCLossTest(tf.test.TestCase):
 
     def _run_ctc(self, data, data_lengths,
@@ -31,18 +15,26 @@ class CTCLossTest(tf.test.TestCase):
         data_lengths_t = tf.constant(data_lengths)
         flat_labels_t = tf.constant(flat_labels)
         label_lengths_t = tf.constant(label_lengths)
+        loss = ctc(data_t, data_lengths=data_lengths_t,
+                   flat_labels=flat_labels_t,
+                   label_lengths=label_lengths_t,
+                   alphabet_size=alphabet_size)
+
+        grad = tf.gradients(loss, [data_t])[0]
+
+        self.assertShapeEqual(expected_loss, loss)
+        self.assertShapeEqual(expected_gradients, grad)
 
         with self.test_session(use_gpu=False) as sess:
-            loss = ctc(data_t, data_lengths=data_lengths_t,
-                       flat_labels=flat_labels_t,
-                       label_lengths=label_lengths_t,
-                       alphabet_size=alphabet_size)
+            if expected_error is None:
+                (tf_loss, tf_grad) = sess.run([loss, grad])
+                self.assertAllClose(tf_loss, expected_loss, atol=1e-6)
+                self.assertAllClose(tf_grad, expected_gradients, atol=1e-6)
+            else:
+                with self.assertRaisesOpError(expected_error):
+                    sess.run([loss, grad])
 
-            grad = tf.gradients(loss, [data_t])[0]
-
-            self.assertShapeEqual(expected_loss, loss)
-            self.assertShapeEqual(expected_gradients, grad)
-
+        with self.test_session(use_gpu=True) as sess:
             if expected_error is None:
                 (tf_loss, tf_grad) = sess.run([loss, grad])
                 self.assertAllClose(tf_loss, expected_loss, atol=1e-6)
