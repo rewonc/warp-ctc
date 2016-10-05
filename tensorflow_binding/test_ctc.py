@@ -33,7 +33,6 @@ class CTCLossTest(tf.test.TestCase):
         label_lengths_t = tf.constant(label_lengths)
 
         with self.test_session(use_gpu=False) as sess:
-            import pdb; pdb.set_trace()
             loss = ctc(data_t, data_lengths=data_lengths_t,
                        flat_labels=flat_labels_t,
                        label_lengths=label_lengths_t,
@@ -41,6 +40,7 @@ class CTCLossTest(tf.test.TestCase):
 
             grad = tf.gradients(loss, [data_t])[0]
 
+            import pdb; pdb.set_trace()
             self.assertShapeEqual(expected_loss, loss)
             self.assertShapeEqual(expected_gradients, grad)
 
@@ -68,7 +68,7 @@ class CTCLossTest(tf.test.TestCase):
         # p prob of each alphabet). This is one instance, so expand
         # dimensions in the middle
         data = np.expand_dims(softmax_activations, 1)
-        labels = np.asarray([0, 1], dtype=np.int32)
+        labels = np.asarray([1, 2], dtype=np.int32)
         expected_loss = np.asarray([0.0851911], dtype=np.float32)
         gradients = np.asarray([
             [0.177031, -0.708125, 0.177031, 0.177031, 0.177031],

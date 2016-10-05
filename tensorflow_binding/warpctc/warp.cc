@@ -80,13 +80,13 @@ class WarpCTCOpCPU : public OpKernel {
     auto loss = loss_t->flat<float>();
     loss(0) = costs;
 
-    std::cout << costs << std::endl;
-    std::cout << stat_alloc << std::endl;
-    std::cout << stat_compute << std::endl;
-    std::cout << cpu_alloc_bytes << std::endl;
-    std::cout << n_minibatches << std::endl;
-    std::cout << info.num_threads << std::endl;
-    std::cout << alphabet_size << std::endl;
+    // std::cout << costs << std::endl;
+    // std::cout << stat_alloc << std::endl;
+    // std::cout << stat_compute << std::endl;
+    // std::cout << cpu_alloc_bytes << std::endl;
+    // std::cout << n_minibatches << std::endl;
+    // std::cout << info.num_threads << std::endl;
+    // std::cout << alphabet_size << std::endl;
 
   }
 };
