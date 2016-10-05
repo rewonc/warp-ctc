@@ -22,19 +22,20 @@ class WarpCTCOpCPU : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // Grab the input tensors
     const Tensor& data_t = context->input(0);
-    // const Tensor& data_lens_t = context->input(1);
-    // const Tensor& labels_t = context->input(2);
-    // const Tensor& label_lens_t = context->input(3);
-    // const Tensor& alphabet_size_t = context->input(4);
+    const Tensor& data_lens_t = context->input(1);
+    const Tensor& labels_t = context->input(2);
+    const Tensor& label_lens_t = context->input(3);
+    const Tensor& alphabet_size_t = context->input(4);
     auto data = data_t.flat<float>();
-    // auto data_lens = data_lens_t.flat<int>();
-    // auto labels = labels_t.flat<int>();
-    // auto label_lens = label_lens_t.flat<int>();
-    // int alphabet_size = alphabet_size_t.vec<int>()({0});
+    auto data_lens = data_lens_t.flat<int>();
+    auto labels = labels_t.flat<int>();
+    auto label_lens = label_lens_t.flat<int>();
+    int alphabet_size = alphabet_size_t.flat<int>()(0);
+    int n_minibatches = data_t.dim_size(1);
 
     ctcComputeInfo info;
     info.loc = CTC_CPU;
-    // // Use single thread for now
+    // // TODO: num_threads with value from TF's device class
     info.num_threads = 1;
 
     // ctcStatus_t get_workspace_size(const int* const label_lengths,
@@ -43,22 +44,62 @@ class WarpCTCOpCPU : public OpKernel {
     //                            ctcComputeInfo info,
     //                            size_t* size_bytes);
 
-    // size_t cpu_alloc_bytes;
-    // ctcStatus_t stat = get_workspace_size(label_lens.data(), data_lens.data(),
-    //                                       alphabet_size, data_lens.size(), info,
-    //                                       &cpu_alloc_bytes);
+    size_t cpu_alloc_bytes;
+    ctcStatus_t stat_alloc = get_workspace_size(label_lens.data(), data_lens.data(),
+                                          alphabet_size, data_lens.size(), info,
+                                          &cpu_alloc_bytes);
 
-    // OP_REQUIRES(context, (stat == CTC_STATUS_SUCCESS),
-    //             errors::Internal("Error in CTC memory allocation"))
+    OP_REQUIRES(context, (stat_alloc == CTC_STATUS_SUCCESS),
+                errors::Internal("Error in CTC memory estimation"))
 
-    // std::cout << std::to_string(cpu_alloc_bytes) << std::endl;
+    // allocate scratch space for ctc computation
+    Tensor scratch;
+    OP_REQUIRES_OK(context, context->allocate_temp(DT_UINT8,
+                                                   TensorShape({alphabet_size}),
+                                                   &scratch));
+
+    // allocate gradient tensor
+    Tensor* gradients = NULL;
+    OP_REQUIRES_OK(context, context->allocate_output(1, data_t.shape(),
+                                                     &gradients));
+    auto grads = gradients->flat<float>();
+
+    // compute CTC
+    float costs;
+    ctcStatus_t stat_compute = compute_ctc_loss(data.data(),
+                                                grads.data(),
+                                                labels.data(),
+                                                label_lens.data(),
+                                                data_lens.data(),
+                                                alphabet_size,
+                                                n_minibatches,
+                                                &costs,
+                                                &scratch,
+                                                info);
+
+    OP_REQUIRES(context, (stat_compute == CTC_STATUS_SUCCESS),
+                errors::Internal("Error in CTC computation"))
+
+    // ctcStatus_t compute_ctc_loss(const float* const activations,
+    //                          float* gradients,
+    //                          const int* const flat_labels,
+    //                          const int* const label_lengths,
+    //                          const int* const input_lengths,
+    //                          int alphabet_size,
+    //                          int minibatch,
+    //                          float *costs,
+    //                          void *workspace,
+    //                          ctcComputeInfo info);
+
+
+    std::cout << costs << std::endl;
+    std::cout << stat_alloc << std::endl;
+    std::cout << stat_compute << std::endl;
+    std::cout << cpu_alloc_bytes << std::endl;
+    std::cout << n_minibatches << std::endl;
     std::cout << info.num_threads << std::endl;
+    std::cout << alphabet_size << std::endl;
 
-    // calculate the required scratch size
-    // Status allocate_temp(DataType type, const TensorShape& shape,
-    //                      Tensor* out_temp) {
-    //   return allocate_temp(type, shape, out_temp, AllocatorAttributes());
-    // }
 
     // Create an output tensor
     Tensor* output_tensor = NULL;
@@ -66,11 +107,7 @@ class WarpCTCOpCPU : public OpKernel {
                                                      &output_tensor));
     auto output = output_tensor->flat<float>();
 
-    // Create an gradients tensor
-    Tensor* gradients = NULL;
-    OP_REQUIRES_OK(context, context->allocate_output(1, data_t.shape(),
-                                                     &gradients));
-    auto grads = gradients->flat<float>();
+
 
     // Set all but the first element of the output tensor to 0.
     const int N = data.size();
