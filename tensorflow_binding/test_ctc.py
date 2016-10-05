@@ -40,7 +40,6 @@ class CTCLossTest(tf.test.TestCase):
 
             grad = tf.gradients(loss, [data_t])[0]
 
-            import pdb; pdb.set_trace()
             self.assertShapeEqual(expected_loss, loss)
             self.assertShapeEqual(expected_gradients, grad)
 
@@ -54,22 +53,18 @@ class CTCLossTest(tf.test.TestCase):
 
     def test_basic(self):
         # Softmax activations for the following inputs:
-        # np.array([
-        #     [0.1, 0.6, 0.1, 0.1, 0.1],
-        #     [0.1, 0.1, 0.6, 0.1, 0.1]
-        # ], dtype=np.float32)
+        activations = np.array([
+            [0.1, 0.6, 0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.6, 0.1, 0.1]
+        ], dtype=np.float32)
 
         alphabet_size = 5
-        softmax_activations = np.asarray([
-            [0.177031, 0.291875, 0.177031, 0.177031, 0.177031],
-            [0.177031, 0.177031, 0.291875, 0.177031, 0.177031]
-        ], dtype=np.float32)
         # dimensions should be t, n, p: (t timesteps, n minibatches,
         # p prob of each alphabet). This is one instance, so expand
         # dimensions in the middle
-        data = np.expand_dims(softmax_activations, 1)
+        data = np.expand_dims(activations, 1)
         labels = np.asarray([1, 2], dtype=np.int32)
-        expected_loss = np.asarray([0.0851911], dtype=np.float32)
+        expected_loss = np.asarray([2.46286], dtype=np.float32)
         gradients = np.asarray([
             [0.177031, -0.708125, 0.177031, 0.177031, 0.177031],
             [0.177031, 0.177031, -0.708125, 0.177031, 0.177031]
