@@ -33,6 +33,7 @@ class CTCLossTest(tf.test.TestCase):
         label_lengths_t = tf.constant(label_lengths)
 
         with self.test_session(use_gpu=False) as sess:
+            import pdb; pdb.set_trace()
             loss = ctc(data_t, data_lengths=data_lengths_t,
                        flat_labels=flat_labels_t,
                        label_lengths=label_lengths_t,
