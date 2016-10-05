@@ -31,13 +31,12 @@ class CTCLossTest(tf.test.TestCase):
         data_lengths_t = tf.constant(data_lengths)
         flat_labels_t = tf.constant(flat_labels)
         label_lengths_t = tf.constant(label_lengths)
-        alphabet_size_t = tf.constant(alphabet_size)
 
         with self.test_session(use_gpu=False) as sess:
             loss = ctc(data_t, data_lengths=data_lengths_t,
                        flat_labels=flat_labels_t,
                        label_lengths=label_lengths_t,
-                       alphabet_size=alphabet_size_t)
+                       alphabet_size=alphabet_size)
 
             grad = tf.gradients(loss, [data_t])[0]
 
