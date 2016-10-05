@@ -37,7 +37,7 @@ class WarpCTCOpCPU : public OpKernel {
     ctcComputeInfo info;
     info.loc = CTC_CPU;
     // // TODO: num_threads with value from TF's device class
-    info.num_threads = 1;
+    info.num_threads = context->device()->tensorflow_cpu_worker_threads()->num_threads;
 
     size_t cpu_alloc_bytes;
     ctcStatus_t stat_alloc = get_workspace_size(label_lens.data(), data_lens.data(),
