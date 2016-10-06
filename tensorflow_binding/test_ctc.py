@@ -24,7 +24,7 @@ class CTCLossTest(tf.test.TestCase):
 
         self.assertShapeEqual(expected_loss, loss)
         self.assertShapeEqual(expected_gradients, grad)
-
+        import pdb; pdb.set_trace()
         with self.test_session(use_gpu=False) as sess:
             if expected_error is None:
                 (tf_loss, tf_grad) = sess.run([loss, grad])
