@@ -42,7 +42,7 @@ def ctc(data, data_lengths, flat_labels, label_lengths, alphabet_size):
 @ops.RegisterGradient("WarpCTC")
 def _CTCLossGrad(op, grad_loss, _):
     grad = op.outputs[1]
-    return [_BroadcastMul(grad_loss, grad), None, None, None, None]
+    return [_BroadcastMul(grad_loss, grad), None, None, None]
 
 
 @ops.RegisterShape("WarpCTC")
