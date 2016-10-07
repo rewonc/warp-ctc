@@ -52,7 +52,7 @@ class CTCLossTest(tf.test.TestCase):
         grad = tf.gradients(loss, [data_t])[0]
         self.assertShapeEqual(expected_loss, loss)
         self.assertShapeEqual(expected_gradients, grad)
-        with self.test_session(use_gpu=True) as sess:
+        with self.test_session(use_gpu=True, force_gpu=True) as sess:
             if expected_error is None:
                 (tf_loss, tf_grad) = sess.run([loss, grad])
                 self.assertAllClose(tf_loss, expected_loss, atol=1e-6)
@@ -110,7 +110,8 @@ class CTCLossTest(tf.test.TestCase):
         expected_gradients = np.expand_dims(gradients, 1)
         label_lengths = np.asarray([2], dtype=np.int32)
         data_lengths = np.asarray([2], dtype=np.int32)
-
+        import os; pid = os.getpid()
+        import pdb; pdb.set_trace()
         self._run_ctc_gpu(data, data_lengths=data_lengths,
                           flat_labels=labels, label_lengths=label_lengths,
                           alphabet_size=alphabet_size,
