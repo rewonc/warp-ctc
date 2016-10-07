@@ -5,17 +5,17 @@
 #include <iostream>
 
 // forward declare CUstream to avoid pulling in cuda headers
-// typedef struct CUstream_st* CUstream;
+typedef struct CUstream_st* CUstream;
 
-// // forward declare stream headers to avoid pulling in stream_executor code
-// namespace perftools {
-// namespace gputools {
-// class Stream;
-// namespace cuda {
-//   CUstream AsCUDAStreamValue(Stream *stream);
-// }  // namespace cuda
-// }  // namespace gputools
-// }  // namespace perftools
+// forward declare stream headers to avoid pulling in stream_executor code
+namespace perftools {
+namespace gputools {
+class Stream;
+namespace cuda {
+  CUstream AsCUDAStreamValue(Stream *stream);
+}  // namespace cuda
+}  // namespace gputools
+}  // namespace perftools
 
 
 REGISTER_OP("WarpCTC")
@@ -54,7 +54,7 @@ class WarpCTCOpCPU : public OpKernel {
 
     size_t cpu_alloc_bytes;
     ctcStatus_t stat_alloc = get_workspace_size(label_lens.data(), data_lens.data(),
-                                          alphabet_size, data_lens.size(), info,
+                                          alphabet_size, n_minibatches, info,
                                           &cpu_alloc_bytes);
 
     OP_REQUIRES(context, (stat_alloc == CTC_STATUS_SUCCESS),
@@ -107,26 +107,25 @@ class WarpCTCOpGPU : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
-    // Grab the input tensors
+
     const Tensor& data_t = context->input(0);
     const Tensor& data_lens_t = context->input(1);
     const Tensor& labels_t = context->input(2);
     const Tensor& label_lens_t = context->input(3);
     auto data = data_t.flat<float>();
-    auto data_lens = data_lens_t.flat<int>();
-    auto labels = labels_t.flat<int>();
-    auto label_lens = label_lens_t.flat<int>();
+    auto data_lens = data_lens_t.flat<int32>();
+    auto labels = labels_t.flat<int32>();
+    auto label_lens = label_lens_t.flat<int32>();
     int alphabet_size = alphabet_size_;
     int n_minibatches = data_t.dim_size(1);
-    // ctcComputeInfo info;
-    // info.loc = CTC_GPU;
-    // info.stream = perftools::gputools::cuda::AsCUDAStreamValue(
-    //   context->device()->tensorflow_gpu_device_info()->stream);
+    ctcComputeInfo info;
+    info.loc = CTC_GPU;
+    info.stream = perftools::gputools::cuda::AsCUDAStreamValue(
+      context->device()->tensorflow_gpu_device_info()->stream);
     // size_t gpu_alloc_size;
     // ctcStatus_t stat_alloc = get_workspace_size(label_lens.data(), data_lens.data(),
-    //                                             alphabet_size, data_lens.size(), info,
+    //                                             alphabet_size, n_minibatches, info,
     //                                             &gpu_alloc_size);
-
     // OP_REQUIRES(context, (stat_alloc == CTC_STATUS_SUCCESS),
     //             errors::Internal("Error in CTC memory estimation"))
 
@@ -166,7 +165,6 @@ class WarpCTCOpGPU : public OpKernel {
  private:
   int alphabet_size_;
 };
-
 
 
 REGISTER_KERNEL_BUILDER(Name("WarpCTC").Device(DEVICE_CPU), WarpCTCOpCPU);
