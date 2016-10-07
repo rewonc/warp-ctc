@@ -4,6 +4,7 @@
 #include "./ctc.h"
 #include <iostream>
 
+
 // forward declare CUstream to avoid pulling in cuda headers
 typedef struct CUstream_st* CUstream;
 
@@ -99,6 +100,7 @@ class WarpCTCOpCPU : public OpKernel {
   int alphabet_size_;
 };
 
+#define EIGEN_USE_GPU
 
 class WarpCTCOpGPU : public OpKernel {
  public:
@@ -118,19 +120,23 @@ class WarpCTCOpGPU : public OpKernel {
     auto label_lens = label_lens_t.flat<int32>();
     int alphabet_size = alphabet_size_;
     int n_minibatches = data_t.dim_size(1);
-    size_t n00 = data.size();
-    float n0 = data(0);
-    int n1 = data_lens(0);
-    int n2 = labels(0);
-    int n3 = label_lens(0);
-    ctcComputeInfo info;
-    info.loc = CTC_GPU;
-    info.stream = perftools::gputools::cuda::AsCUDAStreamValue(
-      context->device()->tensorflow_gpu_device_info()->stream);
-    size_t gpu_alloc_size;
-    ctcStatus_t stat_alloc = get_workspace_size(label_lens.data(), data_lens.data(),
-                                                alphabet_size, n_minibatches, info,
-                                                &gpu_alloc_size);
+
+    // for debugging -- these values appear to not be set. Why?
+    // the values for some reason do not appear to live on the GPU
+    // maybe it is using the cpu eigen, or something?
+    // float n0 = data(0);
+    // int n1 = data_lens(0);
+    // int n2 = labels(0);
+    // int n3 = label_lens(0);
+
+    // ctcComputeInfo info;
+    // info.loc = CTC_GPU;
+    // info.stream = perftools::gputools::cuda::AsCUDAStreamValue(
+    //   context->device()->tensorflow_gpu_device_info()->stream);
+    // size_t gpu_alloc_size;
+    // ctcStatus_t stat_alloc = get_workspace_size(label_lens.data(), data_lens.data(),
+    //                                             alphabet_size, n_minibatches, info,
+    //                                             &gpu_alloc_size);
     // OP_REQUIRES(context, (stat_alloc == CTC_STATUS_SUCCESS),
     //             errors::Internal("Error in CTC memory estimation"))
 
@@ -171,6 +177,7 @@ class WarpCTCOpGPU : public OpKernel {
   int alphabet_size_;
 };
 
+#undef EIGEN_USE_GPU
 
 REGISTER_KERNEL_BUILDER(Name("WarpCTC").Device(DEVICE_CPU), WarpCTCOpCPU);
 REGISTER_KERNEL_BUILDER(Name("WarpCTC").Device(DEVICE_GPU), WarpCTCOpGPU);
